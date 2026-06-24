@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 깔롱한 운동 기록장</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 기본 number input 화살표 숨기기 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        /* 날짜 선택기 아이콘 반전 */
+        input[type=date]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: brightness(0) invert(1); 
+        }
+
+        /* --- 커스텀 스크롤바 (전체 적용) --- */
+        ::-webkit-scrollbar {
+            width: 8px; /* 세로 스크롤바 너비 */
+            height: 8px; /* 가로 스크롤바 높이 */
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* 배경 (gray-800) */
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* 스크롤바 색상 (gray-600) */
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* 호버 시 색상 (gray-500) */
+        }
+        /* 파이어폭스 호환 스크롤바 설정 */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen p-4 flex justify-center font-sans overflow-x-hidden">
+    
+    <div id="toast-container" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none"></div>
+
+    <div class="w-full max-w-lg">
+        
+        <header class="mb-10 mt-4 flex justify-between items-center bg-gray-900 p-5 sm:p-6 rounded-3xl shadow-xl border border-gray-800">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 tracking-tight flex items-center gap-2">
+                    💪 희흐히
+                </h1>
+                <p class="text-gray-400 text-xs sm:text-sm mt-1">오늘의 한계를 넘어서</p>
+            </div>
+            <div class="relative shrink-0">
+                <input type="date" id="date-picker" style="color-scheme: dark;" class="accent-green-600 bg-green-600 hover:bg-green-500 border border-green-500 rounded-full py-3 px-4 sm:pl-6 text-white text-sm sm:text-lg focus:outline-none focus:ring-4 focus:ring-green-400/50 font-bold shadow-lg transition-colors cursor-pointer">
+            </div>
+        </header>
+
+        <section class="bg-gray-900 p-5 sm:p-8 rounded-3xl shadow-xl border border-gray-800 mb-10 w-full">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-200 mb-6 flex items-center gap-3">
+                <span class="w-2 h-7 bg-blue-500 rounded-full"></span>
+                세트 기록 추가
+            </h2>
+
+            <div class="mb-6 relative" id="exercise-container">
+                <label class="block text-sm font-medium mb-2 text-gray-300">운동 종목</label>
+                <div class="flex gap-2 relative">
+                    <input type="text" id="exercise-input" placeholder="운동 이름을 입력하거나 선택하세요" autocomplete="off" class="flex-grow w-full bg-gray-800 border border-gray-700 rounded-xl p-4 text-white text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text" onclick="toggleDropdown()" onkeyup="filterDropdown()">
+                    <div class="absolute right-16 sm:right-20 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+                        ▼
+                    </div>
+                    <button onclick="addExercise()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold w-12 sm:w-16 rounded-xl text-xl flex-shrink-0 flex items-center justify-center transition-colors">
+                        +
+                    </button>
+                </div>
+                
+                <ul id="exercise-dropdown" class="absolute w-[calc(100%-3.5rem)] sm:w-[calc(100%-4.5rem)] mt-2 bg-gray-800 border border-gray-600 rounded-xl max-h-64 overflow-y-auto hidden z-20 shadow-2xl">
+                    </ul>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 sm:gap-6 mb-8 w-full">
+                <div class="w-full min-w-0">
+                    <label class="block text-sm font-medium mb-2 text-gray-300 text-center">무게 (kg)</label>
+                    <div class="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-full p-1 sm:p-2">
+                        <button onclick="decrement('weight', 5)" class="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 rounded-full text-2xl font-bold text-gray-400 flex items-center justify-center focus:outline-none">-</button>
+                        <input type="number" id="weight-input" value="20" step="5" class="w-full bg-transparent text-white text-center text-xl sm:text-3xl font-bold focus:outline-none mx-1">
+                        <button onclick="increment('weight', 5)" class="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 rounded-full text-2xl font-bold text-gray-400 flex items-center justify-center focus:outline-none">+</button>
+                    </div>
+                </div>
+                <div class="w-full min-w-0">
+                    <label class="block text-sm font-medium mb-2 text-gray-300 text-center">횟수 (Reps)</label>
+                    <div class="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-full p-1 sm:p-2">
+                        <button onclick="decrement('reps', 1)" class="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 rounded-full text-2xl font-bold text-gray-400 flex items-center justify-center focus:outline-none">-</button>
+                        <input type="number" id="reps-input" value="10" step="1" class="w-full bg-transparent text-white text-center text-xl sm:text-3xl font-bold focus:outline-none mx-1">
+                        <button onclick="increment('reps', 1)" class="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 rounded-full text-2xl font-bold text-gray-400 flex items-center justify-center focus:outline-none">+</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="add-set-btn" onclick="addOrUpdateSet()" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 sm:py-5 px-4 rounded-full transition duration-200 shadow-xl text-lg sm:text-xl flex items-center justify-center gap-2">
+                <span id="btn-text"> 세트 기록 완료</span>
+            </button>
+        </section>
+
+        <section class="w-full">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-200 mb-6 flex items-center gap-3">
+                <span class="w-2 h-7 bg-blue-500 rounded-full"></span>
+                기록 목록
+            </h2>
+            <ul id="set-list" class="space-y-4">
+                </ul>
+        </section>
+    </div>
+
+    <script>
+        // --- 전역 변수 및 초기화 ---
+        const datePicker = document.getElementById('date-picker');
+        const exerciseInput = document.getElementById('exercise-input');
+        const weightInput = document.getElementById('weight-input');
+        const repsInput = document.getElementById('reps-input');
+        const addSetBtn = document.getElementById('add-set-btn');
+        const btnText = document.getElementById('btn-text');
+        const setList = document.getElementById('set-list');
+        const dropdown = document.getElementById('exercise-dropdown');
+
+        let exercises = JSON.parse(localStorage.getItem('workoutExercises')) || ["벤치프레스", "스쿼트", "데드리프트", "풀업", "바벨 로우"];
+        let allLogs = JSON.parse(localStorage.getItem('workoutLogs')) || {};
+        let editingSetId = null; 
+
+        init();
+
+        function init() {
+            const todayStr = getFormattedDate(new Date());
+            datePicker.value = todayStr;
+            renderLog();
+            datePicker.onchange = renderLog;
+        }
+
+        // --- 커스텀 알림(토스트) 기능 ---
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-green-500' : (type === 'error' ? 'bg-red-500' : 'bg-blue-500');
+            toast.className = `${bgColor} text-white px-6 py-4 rounded-2xl shadow-2xl font-bold text-center transform transition-all duration-300 opacity-0 -translate-y-5`;
+            toast.innerText = message;
+            
+            container.appendChild(toast);
+            
+            // 등장 애니메이션
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', '-translate-y-5');
+                toast.classList.add('opacity-100', 'translate-y-0');
+            });
+
+            // 3초 후 사라짐
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-5');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- 데이터 유틸리티 ---
+        function getFormattedDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('workoutExercises', JSON.stringify(exercises));
+            localStorage.setItem('workoutLogs', JSON.stringify(allLogs));
+        }
+
+        // --- 커스텀 드롭다운 기능 ---
+        function toggleDropdown() {
+            dropdown.classList.toggle('hidden');
+            renderDropdownList();
+        }
+
+        function filterDropdown() {
+            dropdown.classList.remove('hidden');
+            renderDropdownList(exerciseInput.value);
+        }
+
+        function renderDropdownList(filterText = '') {
+            dropdown.innerHTML = '';
+            const filtered = exercises.filter(ex => ex.toLowerCase().includes(filterText.toLowerCase()));
+            
+            if (filtered.length === 0) {
+                // 간격 축소: py-3
+                dropdown.innerHTML = `<li class="py-3 px-4 text-gray-500 text-center text-sm">일치하는 항목이 없습니다.</li>`;
+                return;
+            }
+
+            filtered.forEach(ex => {
+                const li = document.createElement('li');
+                // 간격 축소: p-4 -> py-2.5 px-4
+                li.className = 'py-2.5 px-4 hover:bg-gray-700 cursor-pointer text-white border-b border-gray-700 last:border-0 transition-colors text-base';
+                li.innerText = ex;
+                li.onclick = () => {
+                    exerciseInput.value = ex;
+                    dropdown.classList.add('hidden');
+                };
+                dropdown.appendChild(li);
+            });
+        }
+
+        // 드롭다운 외부 클릭 시 닫기
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('exercise-container');
+            if (!container.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        function addExercise() {
+            const newExercise = exerciseInput.value.trim();
+            if (!newExercise) {
+                return showToast('추가할 운동 이름을 먼저 입력해주세요.');
+            }
+            if (exercises.includes(newExercise)) {
+                return showToast('이미 등록되어 있는 운동입니다.');
+            }
+            
+            exercises.push(newExercise);
+            saveToStorage();
+            showToast(`'${newExercise}' 종목이 추가되었습니다!`, 'success');
+            dropdown.classList.add('hidden');
+        }
+
+        // --- UI 렌더링 ---
+        function renderLog() {
+            const selectedDate = datePicker.value;
+            setList.innerHTML = ''; 
+            resetInputForm(); 
+
+            const dailyLogs = allLogs[selectedDate];
+
+            if (!dailyLogs || dailyLogs.length === 0) {
+                setList.innerHTML = `<li class="text-center text-gray-500 py-10">이 날짜에 기록된 운동이 없습니다.</li>`;
+                return;
+            }
+
+            dailyLogs.forEach((log, index) => {
+                const li = document.createElement('li');
+                li.className = "bg-gray-900 p-5 sm:p-6 rounded-3xl flex justify-between items-center border border-gray-800 shadow-xl group hover:border-blue-500 transition-all";
+                
+                li.innerHTML = `
+                    <div class="flex items-center space-x-4 sm:space-x-6 min-w-0">
+                        <span class="bg-gray-800 text-blue-400 text-sm sm:text-base font-bold w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border border-gray-700 flex-shrink-0">${log.id}</span>
+                        <div class="truncate">
+                            <span class="font-bold text-lg sm:text-xl text-white block mb-1 truncate">${log.exercise}</span>
+                            <div class="text-right text-xl sm:text-3xl font-extrabold flex items-end gap-1">
+                                <span class="text-white">${log.weight}</span><span class="text-sm sm:text-xl text-gray-500 ml-1">kg</span>
+                                <span class="text-gray-600 mx-2 sm:mx-3">×</span>
+                                <span class="text-white">${log.reps}</span><span class="text-sm sm:text-xl text-gray-500 ml-1">회</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                        <button onclick="startEditSet(${index})" class="p-2 sm:p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-blue-400 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </button>
+                        <button onclick="deleteSet(${index})" class="p-2 sm:p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-red-400 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                setList.appendChild(li);
+            });
+        }
+
+        function resetInputForm() {
+            exerciseInput.value = '';
+            weightInput.value = '20';
+            repsInput.value = '10';
+            btnText.innerText = "💪 세트 기록 완료";
+            addSetBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
+            addSetBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
+            editingSetId = null;
+        }
+
+        // --- 증감 버튼 로직 ---
+        function increment(inputId, step) {
+            const input = document.getElementById(`${inputId}-input`);
+            let value = parseInt(input.value) || 0;
+            input.value = value + step;
+        }
+
+        function decrement(inputId, step) {
+            const input = document.getElementById(`${inputId}-input`);
+            let value = parseInt(input.value) || 0;
+            
+            // 무게는 0까지 허용, 횟수는 1까지만 허용
+            if (inputId === 'reps') {
+                input.value = Math.max(1, value - step);
+            } else {
+                input.value = Math.max(0, value - step);
+            }
+        }
+
+        // --- 기록 추가/수정/삭제 ---
+        function addOrUpdateSet() {
+            const selectedDate = datePicker.value;
+            const exercise = exerciseInput.value.trim();
+            const weight = parseInt(weightInput.value);
+            const reps = parseInt(repsInput.value);
+
+            // 유효성 검사 (커스텀 알림창 사용)
+            if (!exercise) {
+                return showToast('운동 종목을 입력하거나 선택해주세요.');
+            }
+            if (isNaN(weight) || weight < 0) {
+                return showToast('무게는 0kg 이상이어야 합니다.');
+            }
+            if (isNaN(reps) || reps < 1) {
+                return showToast('횟수는 최소 1회 이상 입력해야 합니다.');
+            }
+
+            if (!allLogs[selectedDate]) {
+                allLogs[selectedDate] = [];
+            }
+
+            if (editingSetId !== null) {
+                // 수정 모드
+                const dailyLogs = allLogs[selectedDate];
+                const setIndex = dailyLogs.findIndex(log => log.id === editingSetId);
+                if (setIndex !== -1) {
+                    dailyLogs[setIndex].exercise = exercise;
+                    dailyLogs[setIndex].weight = weight;
+                    dailyLogs[setIndex].reps = reps;
+                    showToast('세트 기록이 성공적으로 수정되었습니다.', 'success');
+                }
+            } else {
+                // 추가 모드
+                const dailyLogs = allLogs[selectedDate];
+                let nextId = 1;
+                if(dailyLogs.length > 0) {
+                    const lastSet = dailyLogs[dailyLogs.length - 1];
+                    nextId = parseInt(lastSet.id) + 1;
+                }
+
+                allLogs[selectedDate].push({
+                    id: nextId,
+                    exercise,
+                    weight,
+                    reps
+                });
+                showToast('새로운 세트가 기록되었습니다.', 'success');
+            }
+
+            saveToStorage();
+            renderLog();
+            resetInputForm(); 
+        }
+
+        function startEditSet(index) {
+            const selectedDate = datePicker.value;
+            const dailyLogs = allLogs[selectedDate];
+            const set = dailyLogs[index];
+
+            if (set) {
+                exerciseInput.value = set.exercise;
+                weightInput.value = set.weight;
+                repsInput.value = set.reps;
+                
+                btnText.innerText = "✅ 세트 수정 완료";
+                addSetBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
+                addSetBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+                
+                editingSetId = set.id; 
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function deleteSet(index) {
+            // 삭제 시에는 사용자 실수를 방지하기 위해 기본 confirm 사용
+            if(confirm('정말 이 세트 기록을 삭제하시겠습니까?')) {
+                const selectedDate = datePicker.value;
+                const dailyLogs = allLogs[selectedDate];
+                dailyLogs.splice(index, 1); 
+
+                saveToStorage();
+                renderLog();
+                showToast('기록이 삭제되었습니다.', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
