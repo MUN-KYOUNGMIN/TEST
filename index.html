@@ -82,7 +82,7 @@
                 </div>
                 
                 <ul id="exercise-dropdown" class="absolute w-[calc(100%-3.5rem)] sm:w-[calc(100%-4.5rem)] mt-2 bg-gray-800 border border-gray-600 rounded-xl max-h-64 overflow-y-auto hidden z-20 shadow-2xl">
-                    </ul>
+                </ul>
             </div>
 
             <div class="grid grid-cols-2 gap-3 sm:gap-6 mb-8 w-full">
@@ -105,7 +105,7 @@
             </div>
             
             <button id="add-set-btn" onclick="addOrUpdateSet()" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-4 sm:py-5 px-4 rounded-full transition duration-200 shadow-xl text-lg sm:text-xl flex items-center justify-center gap-2">
-                <span id="btn-text"> 세트 기록 완료</span>
+                <span id="btn-text">💪 세트 기록 완료</span>
             </button>
         </section>
 
@@ -115,7 +115,7 @@
                 기록 목록
             </h2>
             <ul id="set-list" class="space-y-4">
-                </ul>
+            </ul>
         </section>
     </div>
 
@@ -184,7 +184,7 @@
         // --- 커스텀 드롭다운 기능 ---
         function toggleDropdown() {
             dropdown.classList.toggle('hidden');
-            renderDropdownList();
+            renderDropdownList(exerciseInput.value);
         }
 
         function filterDropdown() {
@@ -197,14 +197,12 @@
             const filtered = exercises.filter(ex => ex.toLowerCase().includes(filterText.toLowerCase()));
             
             if (filtered.length === 0) {
-                // 간격 축소: py-3
                 dropdown.innerHTML = `<li class="py-3 px-4 text-gray-500 text-center text-sm">일치하는 항목이 없습니다.</li>`;
                 return;
             }
 
             filtered.forEach(ex => {
                 const li = document.createElement('li');
-                // 간격 축소: p-4 -> py-2.5 px-4
                 li.className = 'py-2.5 px-4 hover:bg-gray-700 cursor-pointer text-white border-b border-gray-700 last:border-0 transition-colors text-base';
                 li.innerText = ex;
                 li.onclick = () => {
@@ -257,7 +255,7 @@
                 
                 li.innerHTML = `
                     <div class="flex items-center space-x-4 sm:space-x-6 min-w-0">
-                        <span class="bg-gray-800 text-blue-400 text-sm sm:text-base font-bold w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border border-gray-700 flex-shrink-0">${log.id}</span>
+                        <span class="bg-gray-800 text-blue-400 text-sm sm:text-base font-bold w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border border-gray-700 flex-shrink-0">${index + 1}</span>
                         <div class="truncate">
                             <span class="font-bold text-lg sm:text-xl text-white block mb-1 truncate">${log.exercise}</span>
                             <div class="text-right text-xl sm:text-3xl font-extrabold flex items-end gap-1">
@@ -285,6 +283,8 @@
             weightInput.value = '20';
             repsInput.value = '10';
             btnText.innerText = "💪 세트 기록 완료";
+            
+            // 클래스 교체 정상화 (초기 파란색 스타일로 복구)
             addSetBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
             addSetBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
             editingSetId = null;
@@ -316,7 +316,7 @@
             const weight = parseInt(weightInput.value);
             const reps = parseInt(repsInput.value);
 
-            // 유효성 검사 (커스텀 알림창 사용)
+            // 유효성 검사
             if (!exercise) {
                 return showToast('운동 종목을 입력하거나 선택해주세요.');
             }
@@ -332,7 +332,7 @@
             }
 
             if (editingSetId !== null) {
-                // 수정 모드
+                // 수정 모드: 고유 타임스탬프 ID 기반 매칭
                 const dailyLogs = allLogs[selectedDate];
                 const setIndex = dailyLogs.findIndex(log => log.id === editingSetId);
                 if (setIndex !== -1) {
@@ -342,16 +342,9 @@
                     showToast('세트 기록이 성공적으로 수정되었습니다.', 'success');
                 }
             } else {
-                // 추가 모드
-                const dailyLogs = allLogs[selectedDate];
-                let nextId = 1;
-                if(dailyLogs.length > 0) {
-                    const lastSet = dailyLogs[dailyLogs.length - 1];
-                    nextId = parseInt(lastSet.id) + 1;
-                }
-
+                // 추가 모드: 중간 데이터 삭제 시 순서 꼬임을 예방하기 위해 고유 ID 발급
                 allLogs[selectedDate].push({
-                    id: nextId,
+                    id: Date.now(),
                     exercise,
                     weight,
                     reps
@@ -375,6 +368,7 @@
                 repsInput.value = set.reps;
                 
                 btnText.innerText = "✅ 세트 수정 완료";
+                // 클래스 완벽 분리 교체 (파란색 제거 -> 녹색 추가)
                 addSetBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
                 addSetBtn.classList.add('bg-green-600', 'hover:bg-green-500');
                 
@@ -384,7 +378,6 @@
         }
 
         function deleteSet(index) {
-            // 삭제 시에는 사용자 실수를 방지하기 위해 기본 confirm 사용
             if(confirm('정말 이 세트 기록을 삭제하시겠습니까?')) {
                 const selectedDate = datePicker.value;
                 const dailyLogs = allLogs[selectedDate];
